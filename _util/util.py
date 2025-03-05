@@ -32,9 +32,10 @@ def choose_robot_motion():
     return user_input_choose_from_list(robot_motions, "Robot Motions", lambda m: m.name)
 
 
-def choose_dataset():
-    processed_data_path = Path(os.environ.get(
-        "DATASET_REPO_ROOT_PATH")) / "processedData"
+def choose_dataset(subdir=None):
+    processed_data_path = Path(os.environ.get("DATASET_REPO_ROOT_PATH"))
+    processed_data_path = processed_data_path / subdir if subdir is not None else processed_data_path
+    processed_data_path = processed_data_path / "processedData"
 
     subfolders = [str(p.name) for _, p in enumerate(processed_data_path.iterdir()) if p.is_dir()]
     subfolder = user_input_choose_from_list(subfolders, "subfolders")
@@ -83,8 +84,8 @@ def choose_model_type():
     return user_input_choose_from_list(["RNN", "Transformer"], "Model Types")
 
 
-def choose_trained_rnn_model(model_class: Type[RNNModel]):
-    trained_models_path = get_repo_root_path() / "ModelGeneration" / "TrainedModels"
+def choose_trained_rnn_model(model_class: Type[RNNModel], trained_models_path=None):
+    trained_models_path = get_repo_root_path() / "ModelGeneration" / "TrainedModels" if trained_models_path is None else trained_models_path
     with open(str((trained_models_path / "RnnModelsParameters.json").absolute()), 'r') as f:
         model_params = json.load(f)
     model_params = [
@@ -105,10 +106,10 @@ def choose_trained_transformer_model():
     return user_input_choose_from_list(trained_model_paths, "Trained Transformer models", lambda p: f"{p.parent.name}/{p.name}")
 
 
-def load_rnn_classification_model(model_class: "type[RNNModel]", params, input_size, output_size):
+def load_rnn_classification_model(model_class: "type[RNNModel]", params, input_size, output_size, classification_dir=None):
     model_name = params["model_name"]
-    classification_path = get_repo_root_path() / "ModelGeneration" / \
-        "TrainedModels" / f"{model_name}.pth"
+    classification_dir = get_repo_root_path() / "ModelGeneration" / "TrainedModels" if classification_dir is None else classification_dir
+    classification_path = classification_dir /  f"{model_name}.pth"
     model_classification = model_class(
         input_size=input_size,
         hidden_size=params["hyperparameters"]["hidden_size"],

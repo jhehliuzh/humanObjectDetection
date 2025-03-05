@@ -1,0 +1,4 @@
+{'caption': 'soft voting classifier that evaluates first 8 predictions (~120ms w/ step size 3) per contact', 'accuracy': 0.5391304347826087}
+{'caption': 'soft voting classifier that evaluates first 10 predictions (~150ms w/ step size 3) per contact', 'accuracy': 0.6782608695652174}
+{'caption': 'soft voting classifier that evaluates first 12 predictions (~180ms w/ step size 3) per contact', 'accuracy': 0.7043478260869566}
+{'caption': 'soft voting classifier that evaluates first 15 predictions (~225ms w/ step size 3) per contact', 'accuracy': 0.7304347826086957}

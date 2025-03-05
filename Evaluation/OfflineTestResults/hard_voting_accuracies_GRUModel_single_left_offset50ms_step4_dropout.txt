@@ -1,0 +1,4 @@
+{'caption': 'hard voting classifier that evaluates first 8 predictions (~120ms w/ step size 3) per contact', 'accuracy': 0.6260869565217392}
+{'caption': 'hard voting classifier that evaluates first 10 predictions (~150ms w/ step size 3) per contact', 'accuracy': 0.3652173913043478}
+{'caption': 'hard voting classifier that evaluates first 12 predictions (~180ms w/ step size 3) per contact', 'accuracy': 0.25217391304347825}
+{'caption': 'hard voting classifier that evaluates first 15 predictions (~225ms w/ step size 3) per contact', 'accuracy': 0.25217391304347825}

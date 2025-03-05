@@ -1,0 +1,86 @@
+[
+    {
+        "model_name": "GRUModel_sliding_left_offset100ms_step4_SOFTSTATIC_dropout",
+        "modification_time": "2024-07-10 10:14:03",
+        "hyperparameters": {
+            "hidden_size": 150,
+            "num_layers": 2,
+            "epochs": 150,
+            "learning_rate": 0.1,
+            "dropout_rate": 0.2
+        },
+        "optimizer": "AdamW"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset100ms_step4_dropout",
+        "modification_time": "2024-07-10 10:31:20",
+        "hyperparameters": {
+            "hidden_size": 16,
+            "num_layers": 2,
+            "epochs": 150,
+            "learning_rate": 0.1,
+            "dropout_rate": 0.3
+        },
+        "optimizer": "AdamW"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset100ms_step4_static_c3_soft_dropout",
+        "modification_time": "2024-07-24 11:22:05",
+        "hyperparameters": {
+            "hidden_size": 40,
+            "num_layers": 3,
+            "epochs": 200,
+            "learning_rate": 0.01,
+            "dropout_rate": 0.4
+        },
+        "optimizer": "AdamW"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset100ms_step4_static_c3_soft_dropout_50epochs_smallersize",
+        "modification_time": "2024-07-24 13:02:22",
+        "hyperparameters": {
+            "hidden_size": 24,
+            "num_layers": 2,
+            "epochs": 50,
+            "learning_rate": 0.01,
+            "dropout_rate": 0.1
+        },
+        "optimizer": "Adam"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset25ms_step2_SOFTSTATIC_static_c3_soft_dropout",
+        "modification_time": "2024-07-24 13:59:56",
+        "hyperparameters": {
+            "hidden_size": 24,
+            "num_layers": 2,
+            "epochs": 50,
+            "learning_rate": 0.01,
+            "dropout_rate": 0.1
+        },
+        "optimizer": "AdamW"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset100ms_step2_maxOffset30_static_c3_soft_dropout",
+        "modification_time": "2024-07-24 15:19:17",
+        "hyperparameters": {
+            "hidden_size": 24,
+            "num_layers": 2,
+            "epochs": 50,
+            "learning_rate": 0.01,
+            "dropout_rate": 0.1
+        },
+        "optimizer": "AdamW"
+    },
+    {
+        "model_name": "GRUModel_sliding_left_offset25ms_step2_maxOffset30_static_c3_soft_dropout",
+        "modification_time": "2024-07-24 15:36:45",
+        "hyperparameters": {
+            "hidden_size": 24,
+            "num_layers": 2,
+            "epochs": 50,
+            "learning_rate": 0.01,
+            "dropout_rate": 0.1
+        },
+        "optimizer": "AdamW"
+    }
+]

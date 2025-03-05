@@ -43,6 +43,8 @@ class MakeFolderDataset:
             self.reference_duration_multiplier_upper = meta_data[
                 'reference_duration_multiplier_upper'] if 'reference_duration_multiplier_upper' in meta_data else None
             self.motion = meta_data["motion_filename"]
+            
+            self.dynamic = 1 if 'dynamic' in meta_data and meta_data["dynamic"] else 0
 
     def _extract_array(self, data_dict: dict, data_frame: str, header: list,  n: int):
         _, y = data_frame[n].split(':')

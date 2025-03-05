@@ -23,9 +23,7 @@ How to Run:
 		conda activate frankapyenv
 		bash /home/mindlab/franka/frankapy/bash_scripts/start_control_pc.sh -i localhost
 
-3. Specify the Output Folder (PATH) - (line 48 in the code).
-
-4. Run the Program:
+3. Run the Program:
     - Open another terminal:
         conda activate frankapyenv
         source /opt/ros/noetic/setup.bash
@@ -54,14 +52,17 @@ from std_msgs.msg import Float64
 from _util.util import choose_robot_motion, user_input_choose_from_list
 
 # Set base path for saving data
-subfolder = user_input_choose_from_list(choices=["rawData", "testData"], caption="subfolders")
+subfolder = user_input_choose_from_list(
+    choices=["rawData", "testData"], caption="subfolders")
 ROOT_PATH = Path(f"/home/mindlab/humanObjectDetectionDataset/{subfolder}")
 
 # Prompt the user to enter a tag name, the current robot motion and the contact type
 FOLDER_TAG = input('Enter tag name: ')
 
 used_robot_motion = choose_robot_motion()
-contact_type = user_input_choose_from_list(choices=["soft", "hard", "pvc_tube"], caption="contact types")
+contact_type = user_input_choose_from_list(
+    choices=["soft", "hard", "pvc_tube"], caption="contact types")
+dynamic = input("Is the contact dynamic? (y/n): ").lower() == 'y'
 
 
 class LogData:
@@ -78,6 +79,8 @@ class LogData:
         all_data_path = str((self.PATH / 'all_data.txt').absolute())
         true_label_path = str((self.PATH / 'true_label.csv').absolute())
         model_results_path = str((self.PATH / 'model_result.csv').absolute())
+        classification_windows_path = str(
+            (self.PATH / 'classification_windows.csv').absolute())
         meta_path = str((self.PATH / 'meta.json').absolute())
 
         self.all_data_file = open(all_data_path, 'w')
@@ -88,11 +91,15 @@ class LogData:
 
         self.model_results_file = csv.writer(open(model_results_path, 'w'))
         self.model_results_file.writerow(
-            ('Time_sec', 'Time_nsec', 'prediction_duration', 'contact', 'contact_class_prediction'))
+            ('Time_sec', 'Time_nsec', 'prediction_duration', 'contact', 'contact_class_prediction', 'majority_voting_nof_individual_predictions'))
+
+        self.classification_windows_file = csv.writer(
+            open(classification_windows_path, 'w'))
 
         meta_data = {
             "date": datetime.now().strftime('%Y-%m-%d'),
             "contact_type": contact_type,
+            "dynamic": dynamic,
             "start_from_time": -1,
             "motion_filename": used_robot_motion.name,
             "reference_duration_multiplier_lower": None,
@@ -106,6 +113,8 @@ class LogData:
         # Subscribe to relevant ROS topics
         rospy.Subscriber(
             name="/model_output", data_class=numpy_msg(Floats), callback=self.save_model_output)
+        rospy.Subscriber(
+            name="/classification_window", data_class=numpy_msg(Floats), callback=self.save_classification_window)
         rospy.Subscriber(name="/robot_state_publisher_node_1/robot_state",
                          data_class=RobotState, callback=self.save_robot_state)
         rospy.Subscriber(name="/contactTimeIndex",
@@ -120,6 +129,10 @@ class LogData:
         # Save model output data to model_result.csv
         data_row = np.array(data.data)
         self.model_results_file.writerow(data_row)
+
+    def save_classification_window(self, data):
+        data_row = np.array(data.data)
+        self.classification_windows_file.writerow(data_row)
 
     def save_robot_state(self, data):
         # Save robot state data to all_data.txt

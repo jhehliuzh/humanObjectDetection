@@ -14,7 +14,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from _util.util import (choose_dataset, choose_model_type,
                         choose_trained_rnn_model,
-                        choose_trained_transformer_model,
+                        choose_trained_transformer_model, get_repo_root_path,
                         load_rnn_classification_model,
                         load_transformer_classification_model,
                         normalize_window)
@@ -42,6 +42,11 @@ elif model_type == "Transformer":
     model_classification, transformer_config = load_transformer_classification_model(
         transformer_model_path, classification_model_input_size, len(labels_classification), window_classification_length)
 
+trainable_params = sum(p.numel() for p in model_classification.parameters() if p.requires_grad)
+non_trainable_params = sum(p.numel() for p in model_classification.parameters() if not p.requires_grad)
+
+print(f"\nTrainable parameters: {trainable_params}")
+print(f"Non-trainable parameters: {non_trainable_params}")
 
 _, X_file = choose_dataset()
 
@@ -80,7 +85,6 @@ for i, x_i in enumerate(X):
         x_i, rnn_model_params if model_type == "RNN" else transformer_config)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
 model_classification = model_classification.to(device)
 model_classification.eval()
 
@@ -108,9 +112,9 @@ majority_voting_window_lengths = [
     l for l in majority_voting_window_lengths if l <= min_steps]
 
 soft_voting_classifiers = [SoftVotingClassifier(
-    model_classification, l) for l in majority_voting_window_lengths]
+    model_classification, l, len(labels_classification)) for l in majority_voting_window_lengths]
 hard_voting_classifiers = [HardVotingClassifier(
-    model_classification, l) for l in majority_voting_window_lengths]
+    model_classification, l, len(labels_classification)) for l in majority_voting_window_lengths]
 
 # Perform inference with majority voting classifiers
 soft_voting_predictions = [[]
@@ -159,6 +163,11 @@ accuracies_soft = [{"caption": f"soft voting classifier that evaluates first {l}
                     "accuracy": np.mean(soft_voting_predictions[i] == y_by_contact)} for i, l in enumerate(majority_voting_window_lengths)]
 accuracies_hard = [{"caption": f"hard voting classifier that evaluates first {l} predictions (~{l*5*prediction_step_size}ms w/ step size {prediction_step_size}) per contact",
                     "accuracy": np.mean(hard_voting_predictions[i] == y_by_contact)} for i, l in enumerate(majority_voting_window_lengths)]
+
+# Save accuracies_soft and accuracies_hard as text files
+model_name = rnn_model_params['model_name'] if model_type == "RNN" else f"Transformer_{transformer_model_path.parent.name}_{transformer_model_path.name}"
+np.savetxt(get_repo_root_path() / "Evaluation" / "OfflineTestResults" / f"soft_voting_accuracies_{model_name}.txt", accuracies_soft, fmt='%s')
+np.savetxt(get_repo_root_path() / "Evaluation" / "OfflineTestResults" / f"hard_voting_accuracies_{model_name}.txt", accuracies_hard, fmt='%s')
 
 print(
     f"\nWindow size: {window_classification_length}, Prediction step size: {prediction_step_size}")
@@ -219,4 +228,9 @@ for i, cm in enumerate(confusion_matrices_hard):
     display_confusion_matrix(cm, axs_hard[i], confusion_matrices_max_val_hard,
                              f'hard voting: first {majority_voting_window_lengths[i]} predictions per contact\nprediction step size: {prediction_step_size}')
 
-plt.show()
+plt.tight_layout()
+fig_soft.tight_layout()
+fig_soft.savefig(get_repo_root_path() / "Evaluation" / "OfflineTestResults" / f"soft_voting_CM_{model_name}.png", bbox_inches='tight')
+fig_hard.tight_layout()
+fig_hard.savefig(get_repo_root_path() / "Evaluation" / "OfflineTestResults" / f"hard_voting_CM_{model_name}.png", bbox_inches='tight')
+#plt.show()

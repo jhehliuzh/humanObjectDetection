@@ -240,7 +240,8 @@ class RNNModelTrainer():
             disp.figure_.savefig(str(
                 (trained_model_results_path / f"confusion_matrix_{self.model_class.__name__}_{file_suffix}.png").absolute()))
 
-            plt.show()
+            #plt.show()
+            plt.close()
         except:
             print("unable to create confusion matrix due to test set expected labels not matching expected label count")
 
@@ -324,8 +325,7 @@ if __name__ == '__main__':
     dropout_mode = choose_dropout_mode()
 
     X = np.load(str(X_file.absolute()))
-    y = np.load(
-        str((X_file.parent / X_file.name.replace("x_", "y_")).absolute()))
+    y = np.load(str((X_file.parent / X_file.name.replace("x_", "y_")).absolute()))
 
     # filter X features to fit model
     target_torque = ['tau_J0', 'tau_J1', 'tau_J2',

@@ -35,15 +35,15 @@ if __name__ == '__main__':
               'val_ratio': 0.1,
               # choices={'T', 'C-T'}, help="Network Architecture. Convolution (C)" "Transformers (T)"
               'Net_Type': ['C-T'],
-              'emb_size': 16,
+              'emb_size': 8,
               'dim_ff': 256,
-              'num_heads': 8,
+              'num_heads': 1,
               'Fix_pos_encode': 'tAPE',  # {'tAPE', 'Learn', 'None'}
               'Rel_pos_encode': 'eRPE',  # {'eRPE', 'Vector', 'None'}
-              'epochs': 700,
+              'epochs': 175,
               'batch_size': 512,
               'lr': 1e-4,
-              'dropout': 0.2,
+              'dropout': 0.3,
               'val_interval': 2,
               # {'loss', 'accuracy', 'precision'}, help='Metric used for defining best epoch'
               'key_metric': 'loss',

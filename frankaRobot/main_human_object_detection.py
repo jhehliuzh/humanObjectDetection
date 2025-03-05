@@ -44,6 +44,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 import signal
+import threading
 from threading import Event
 from typing import Type
 
@@ -65,14 +66,17 @@ from _util.util import (choose_model_type, choose_robot_motion,
                         load_transformer_classification_model,
                         normalize_window, user_input_choose_from_list)
 from ModelGeneration.majority_voting import (HardVotingClassifier,
-                                             MajorityVotingClassifier,
                                              SoftVotingClassifier)
 from ModelGeneration.model_generation import choose_rnn_model_class
+
+GREEN = '\033[92m'
+RESET = '\033[0m'
 
 
 class HumanObjectDetectionNode:
     def __init__(self):
         rospy.init_node('human_object_detection_node', disable_signals=True)
+
         self.shutdown_requested = Event()
 
         self.classification_model_input_size = 21
@@ -89,16 +93,20 @@ class HumanObjectDetectionNode:
 
         majority_voting_classifier_class = user_input_choose_from_list(
             [HardVotingClassifier, SoftVotingClassifier], "Majority voting classifier", lambda v: v.__name__)
+        nof_individual_predictions = int(user_input_choose_from_list(
+            [8, 10, 12, 15], "Majority voting: umber of predictions"))
         self.majority_voting_classifier = majority_voting_classifier_class(
-            model=self.model_classification, number_of_predictions=12)
+            model=self.model_classification, nof_individual_predictions=nof_individual_predictions, output_size=3)
 
         self.robot_motion_path = choose_robot_motion()
 
         self.classification_window = np.zeros(
             [self.window_classification_length, self.classification_model_input_size])
         self.model_output_msg = Floats()
+        self.classification_window_msg = Floats()
 
         self.classification_counter = 0
+        self.majority_vote_counter = 0
         self.has_contact = False
 
         self.fa = FrankaArm(init_node=False)
@@ -107,15 +115,34 @@ class HumanObjectDetectionNode:
 
         self.contact_timer = None
 
-        rospy.Subscriber(name="/robot_state_publisher_node_1/robot_state",
-                         data_class=RobotState, callback=self.contact_predictions)
-        rospy.Subscriber(name="/contactTimeIndex",
-                         data_class=numpy_msg(Floats), callback=self.contact_cb)
+        self.robot_state_thread = threading.Thread(target=self.robot_state_listener)
+        self.contact_thread = threading.Thread(target=self.contact_listener)       
+        self.robot_state_thread.daemon = True
+        self.contact_thread.daemon = True
+        self.robot_state_thread.start()
+        self.contact_thread.start()
+
+        #rospy.Subscriber(name="/robot_state_publisher_node_1/robot_state",
+        #                 data_class=RobotState, callback=self.contact_predictions)
+        #rospy.Subscriber(name="/contactTimeIndex",
+        #                 data_class=numpy_msg(Floats), callback=self.contact_cb)
         self.model_pub = rospy.Publisher(
             "/model_output", numpy_msg(Floats), queue_size=1)
+        self.classification_window_pub = rospy.Publisher(
+            "/classification_window", numpy_msg(Floats), queue_size=1)
 
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def robot_state_listener(self):
+        rospy.Subscriber(name="/robot_state_publisher_node_1/robot_state",
+                         data_class=RobotState, callback=self.contact_predictions)
+        rospy.spin() 
+
+    def contact_listener(self):
+        rospy.Subscriber(name="/contactTimeIndex",
+                         data_class=numpy_msg(Floats), callback=self.contact_cb)
+        rospy.spin()
 
     def signal_handler(self, signum, frame):
         rospy.loginfo("Shutdown signal received.")
@@ -150,7 +177,7 @@ class HumanObjectDetectionNode:
         if self.contact_timer is not None:
             self.contact_timer.shutdown()
         self.contact_timer = rospy.Timer(
-            rospy.Duration(0.0025), self.contact_timer_callback)
+            rospy.Duration(0.015), self.contact_timer_callback)
 
     def contact_predictions(self, data):
         if self.shutdown_requested.is_set():
@@ -175,7 +202,13 @@ class HumanObjectDetectionNode:
 
         # make classification prediction every 3rd time (classification_counter = 0, 1, 2)
         # only make predictions if majority voting classifier has not predicted yet (for this contact)
-        if self.classification_counter == 2 and self.majority_voting_classifier.get_has_predicted() == False:
+        has_predicted_for_contact = self.majority_voting_classifier.get_has_predicted()
+        if self.classification_counter == 2 and not has_predicted_for_contact:
+            start_time = np.array(start_time).tolist()
+            time_sec = int(start_time)
+            time_nsec = start_time - time_sec
+            time_sec = time_sec - self.big_time_digits
+
             if self.model_type == "RNN":
                 classification_tensor = torch.tensor(
                     self.classification_window, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -187,18 +220,25 @@ class HumanObjectDetectionNode:
             majority_voting_prediction = self.majority_voting_classifier.predict(
                 classification_tensor)
 
+            flattened_classification_window = classification_tensor.numpy().flatten()
+            self.classification_window_msg.data = np.concatenate([np.array(
+                [time_sec, time_nsec, self.majority_vote_counter]), flattened_classification_window])
+            self.classification_window_pub.publish(
+                self.classification_window_msg)
+
             # publish prediction if majority voting classifier has predicted
             if majority_voting_prediction is not None:
                 prediction_duration = rospy.get_time() - start_time
                 rospy.loginfo(
-                    f'prediction duration: {prediction_duration}, classification prediction: {self.labels_classification[int(majority_voting_prediction)]}')
+                    GREEN +
+                    f'prediction duration: {prediction_duration}, classification prediction: {self.labels_classification[int(majority_voting_prediction)]}'
+                    + RESET)
 
-                start_time = np.array(start_time).tolist()
-                time_sec = int(start_time)
-                time_nsec = start_time - time_sec
-                self.model_output_msg.data = np.array([time_sec - self.big_time_digits, time_nsec,
-                                                       prediction_duration, 1, majority_voting_prediction], dtype=np.complex128)
+                self.model_output_msg.data = np.array(
+                    [time_sec, time_nsec, prediction_duration, 1, majority_voting_prediction, self.majority_voting_classifier.nof_individual_predictions])
                 self.model_pub.publish(self.model_output_msg)
+
+                self.majority_vote_counter += 1
 
         self.classification_counter = (self.classification_counter + 1) % 3
 
